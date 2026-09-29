@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BanknoteIcon,
   LayoutDashboardIcon,
   ReceiptIcon,
   RepeatIcon,
@@ -20,6 +21,7 @@ const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboardIcon },
   { href: "/transactions", label: "Transactions", icon: ReceiptIcon },
   { href: "/budgets", label: "Budgets", icon: TargetIcon },
+  { href: "/salary", label: "Salary", icon: BanknoteIcon },
   { href: "/recurring", label: "Recurring", icon: RepeatIcon },
   { href: "/categories", label: "Categories", icon: TagsIcon },
 ];

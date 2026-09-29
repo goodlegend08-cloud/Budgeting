@@ -127,3 +127,56 @@ export const settingsSchema = z.object({
   monthStartDay: z.number().int().min(1).max(28),
 });
 export type Settings = z.infer<typeof settingsSchema>;
+
+export const salaryLineSchema = z.object({
+  name: z.string().min(1).max(40),
+  amount: z.number().nonnegative(),
+});
+export type SalaryLine = z.infer<typeof salaryLineSchema>;
+
+export const salaryRecordSchema = z.object({
+  id: z.string(),
+  label: z.string().min(1).max(60),
+  date: isoDateSchema,
+  grossPay: z.number().positive(),
+  allowances: z.array(salaryLineSchema),
+  deductions: z.array(salaryLineSchema),
+  note: z.string().max(200),
+  createdAt: z.string(),
+});
+export type SalaryRecord = z.infer<typeof salaryRecordSchema>;
+
+const salaryLineFormSchema = z.object({
+  name: z
+    .string({ error: "Enter a name" })
+    .trim()
+    .min(1, "Enter a name")
+    .max(40, "Name is too long"),
+  amount: z.preprocess(
+    (value) => (value === "" || value === null || value === undefined ? 0 : value),
+    z.coerce
+      .number({ error: "Enter an amount" })
+      .nonnegative("Amount cannot be negative")
+      .max(1_000_000_000, "Amount is too large"),
+  ),
+});
+
+export const salaryFormSchema = z.object({
+  label: z
+    .string({ error: "Enter a label" })
+    .trim()
+    .min(1, "Enter a label")
+    .max(60, "Label is too long"),
+  date: isoDateSchema,
+  grossPay: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? NaN : value),
+    z.coerce
+      .number({ error: "Enter gross pay" })
+      .positive("Gross pay must be greater than zero")
+      .max(1_000_000_000, "Amount is too large"),
+  ),
+  allowances: z.array(salaryLineFormSchema),
+  deductions: z.array(salaryLineFormSchema),
+  note: z.string().max(200, "Note is too long").default(""),
+});
+export type SalaryFormValues = z.infer<typeof salaryFormSchema>;

@@ -1,6 +1,6 @@
 const { chromium } = require("playwright");
 
-const BASE = "http://localhost:3000";
+const BASE = process.env.E2E_BASE_URL || "http://localhost:3000";
 const results = [];
 const errors = [];
 
@@ -28,6 +28,7 @@ async function addTransaction(page, { amount, category, note }) {
     .click();
   await page.locator("#note").fill(note);
   await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.waitFor({ state: "detached" });
   await page.getByText(note).first().waitFor();
 }
 
@@ -63,26 +64,27 @@ async function openLimitDialog(page, categoryName) {
   const dialog = await openLimitDialog(page, "Groceries");
   await page.locator("#budget-limit").fill("300");
   await dialog.getByRole("button", { name: "Save" }).click();
+  await dialog.waitFor({ state: "detached" });
   await page
-    .getByText("$300.00")
+    .getByText("₱300.00")
     .first()
     .waitFor()
     .catch(() => {});
   check(
     "limit applied and shows full amount left",
-    (await page.getByText("$0.00 of $300.00").count()) > 0 &&
-      (await page.getByText("$300.00").count()) > 0,
+    (await page.getByText("₱0.00 of ₱300.00").count()) > 0 &&
+      (await page.getByText("₱300.00").count()) > 0,
   );
 
   // --- persists across reload ---
   await page.reload();
   await page
-    .getByText("$0.00 of $300.00")
+    .getByText("₱0.00 of ₱300.00")
     .waitFor()
     .catch(() => {});
   check(
     "limit persists after reload",
-    (await page.getByText("$0.00 of $300.00").count()) > 0,
+    (await page.getByText("₱0.00 of ₱300.00").count()) > 0,
   );
 
   // --- spend inside and outside the budget ---
@@ -90,15 +92,15 @@ async function openLimitDialog(page, categoryName) {
   await addTransaction(page, { amount: 250, category: "Dining", note: "Dinner" });
   await page.goto(`${BASE}/budgets`);
   await page
-    .getByText("$120.00 of $300.00")
+    .getByText("₱120.00 of ₱300.00")
     .waitFor()
     .catch(() => {});
   const summaryText = await page.locator("main").textContent();
   check(
     "summary: budgeted spent, left, unbudgeted note",
-    summaryText.includes("$120.00 of $300.00") &&
-      summaryText.includes("$180.00") &&
-      summaryText.includes("Plus $250.00 outside budgets"),
+    summaryText.includes("₱120.00 of ₱300.00") &&
+      summaryText.includes("₱180.00") &&
+      summaryText.includes("Plus ₱250.00 outside budgets"),
     summaryText.slice(0, 0),
   );
   check(
@@ -110,13 +112,13 @@ async function openLimitDialog(page, categoryName) {
   await addTransaction(page, { amount: 250, category: "Groceries", note: "Bulk run" });
   await page.goto(`${BASE}/budgets`);
   await page
-    .getByText("Over by $70.00")
+    .getByText("Over by ₱70.00")
     .waitFor()
     .catch(() => {});
   const overText = await page.locator("main").textContent();
   check(
     "overspend highlighted",
-    overText.includes("Over by $70.00") && overText.includes("$370.00 of $300.00"),
+    overText.includes("Over by ₱70.00") && overText.includes("₱370.00 of ₱300.00"),
   );
 
   // --- month switcher ---
@@ -145,12 +147,12 @@ async function openLimitDialog(page, categoryName) {
   );
   await page.getByRole("button", { name: "Today" }).click();
   await page
-    .getByText("Over by $70.00")
+    .getByText("Over by ₱70.00")
     .waitFor()
     .catch(() => {});
   check(
     "Today restores current month view",
-    (await page.getByText("Over by $70.00").count()) > 0,
+    (await page.getByText("Over by ₱70.00").count()) > 0,
   );
 
   // --- revert to category default ---
@@ -160,10 +162,10 @@ async function openLimitDialog(page, categoryName) {
     (await dialog2.getByRole("button", { name: "Use category default" }).count()) > 0,
   );
   await dialog2.getByRole("button", { name: "Use category default" }).click();
-  await page.waitForTimeout(400);
+  await dialog2.waitFor({ state: "detached" });
   check(
     "revert removes the monthly override",
-    (await page.getByText("$370.00 spent · no limit").count()) > 0,
+    (await page.getByText("₱370.00 spent · no limit").count()) > 0,
   );
 
   await browser.close();

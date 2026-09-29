@@ -4,6 +4,7 @@ import { DEFAULT_CURRENCY } from "@/lib/format";
 import type {
   Category,
   Recurring,
+  SalaryRecord,
   Settings,
   Transaction,
   TransactionType,
@@ -12,6 +13,7 @@ import type {
 const emptyCategories: Category[] = [];
 const emptyTransactions: Transaction[] = [];
 const emptyRecurring: Recurring[] = [];
+const emptySalary: SalaryRecord[] = [];
 const emptyUsage = new Map<string, number>();
 const emptyLimits = new Map<string, number>();
 
@@ -103,6 +105,15 @@ export function useRecurring(): Recurring[] {
     emptyRecurring,
   );
   return items ?? emptyRecurring;
+}
+
+export function useSalaryRecords(): SalaryRecord[] {
+  const records = useLiveQuery(
+    () => db.salary.orderBy("date").reverse().toArray(),
+    [],
+    emptySalary,
+  );
+  return records ?? emptySalary;
 }
 
 export function useSettings(): Settings {

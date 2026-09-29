@@ -1,6 +1,6 @@
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 
-export const DEFAULT_CURRENCY = "USD";
+export const DEFAULT_CURRENCY = "PHP";
 
 export function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
@@ -13,6 +13,7 @@ export function formatMoney(
   const formatted = new Intl.NumberFormat(undefined, {
     style: "currency",
     currency,
+    currencyDisplay: "narrowSymbol",
   }).format(Math.abs(round2(amount)));
   return amount < 0 ? `-${formatted}` : formatted;
 }

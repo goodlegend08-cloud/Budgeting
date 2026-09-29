@@ -1,6 +1,6 @@
 const { chromium } = require("playwright");
 
-const BASE = "http://localhost:3000";
+const BASE = process.env.E2E_BASE_URL || "http://localhost:3000";
 const results = [];
 const errors = [];
 
@@ -72,8 +72,8 @@ async function addTransaction(page, amount, category, note) {
   const hasDining = await page.getByText("Dining").count();
   check("category breakdown lists both categories", hasGroceries > 0 && hasDining > 0);
 
-  const legendHasAmount = await page.getByText("$120.00").count();
-  check("legend shows amount", legendHasAmount > 0, `$120.00 count=${legendHasAmount}`);
+  const legendHasAmount = await page.getByText("₱120.00").count();
+  check("legend shows amount", legendHasAmount > 0, `₱120.00 count=${legendHasAmount}`);
 
   // --- summary cards (month-filtered) ---
   const spentCard = page.locator('[data-slot="card"]').filter({ hasText: "Spent" });
@@ -83,7 +83,7 @@ async function addTransaction(page, amount, category, note) {
     .catch(() => "");
   check(
     "summary shows month spend",
-    spentText.includes("$370.00"),
+    spentText.includes("₱370.00"),
     `got "${spentText.replace(/\n/g, " ")}"`,
   );
 
@@ -121,7 +121,7 @@ async function addTransaction(page, amount, category, note) {
     .catch(() => "");
   check(
     "next month summary is zero",
-    nextSpent.includes("$0.00"),
+    nextSpent.includes("₱0.00"),
     `got "${nextSpent.replace(/\n/g, " ")}"`,
   );
 
@@ -144,7 +144,7 @@ async function addTransaction(page, amount, category, note) {
     .catch(() => "");
   check(
     "Today restores spend total",
-    backSpent.includes("$370.00"),
+    backSpent.includes("₱370.00"),
     `got "${backSpent.replace(/\n/g, " ")}"`,
   );
 

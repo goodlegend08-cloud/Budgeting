@@ -5,6 +5,7 @@ import { advanceDate, recurringNote } from "@/lib/recurring";
 import type {
   CategoryFormValues,
   RecurringFormValues,
+  SalaryFormValues,
   TransactionFormValues,
 } from "@/lib/schemas";
 
@@ -18,25 +19,31 @@ export async function saveTransaction(
     note: values.note ?? "",
   };
 
-  if (existingId) {
-    const existing = await db.transactions.get(existingId);
-    if (!existing) throw new Error("Transaction not found");
-    await db.transactions.put({ ...existing, ...payload });
-    return existingId;
-  }
+  // Explicit transaction: the promise resolves only after the write commits,
+  // so a fast navigation right after saving cannot roll it back.
+  return db.transaction("rw", db.transactions, async () => {
+    if (existingId) {
+      const existing = await db.transactions.get(existingId);
+      if (!existing) throw new Error("Transaction not found");
+      await db.transactions.put({ ...existing, ...payload });
+      return existingId;
+    }
 
-  const id = crypto.randomUUID();
-  await db.transactions.add({
-    ...payload,
-    id,
-    recurringId: null,
-    createdAt: new Date().toISOString(),
+    const id = crypto.randomUUID();
+    await db.transactions.add({
+      ...payload,
+      id,
+      recurringId: null,
+      createdAt: new Date().toISOString(),
+    });
+    return id;
   });
-  return id;
 }
 
 export async function deleteTransaction(id: string): Promise<void> {
-  await db.transactions.delete(id);
+  await db.transaction("rw", db.transactions, async () => {
+    await db.transactions.delete(id);
+  });
 }
 
 export async function setBudgetOverride(
@@ -45,11 +52,13 @@ export async function setBudgetOverride(
   limit: number | null,
 ): Promise<void> {
   const id = budgetId(month, categoryId);
-  if (limit === null) {
-    await db.budgets.delete(id);
-    return;
-  }
-  await db.budgets.put({ id, month, categoryId, limit: round2(limit) });
+  await db.transaction("rw", db.budgets, async () => {
+    if (limit === null) {
+      await db.budgets.delete(id);
+      return;
+    }
+    await db.budgets.put({ id, month, categoryId, limit: round2(limit) });
+  });
 }
 
 async function usageCount(categoryId: string): Promise<number> {
@@ -76,56 +85,62 @@ export async function saveCategory(
     monthlyLimit: values.monthlyLimit === null ? null : round2(values.monthlyLimit),
   };
 
-  const all = await db.categories.toArray();
-  const duplicate = all.some(
-    (category) =>
-      category.id !== existingId &&
-      !category.archived &&
-      category.type === payload.type &&
-      category.name.toLowerCase() === payload.name.toLowerCase(),
-  );
-  if (duplicate) throw new Error("A category with this name already exists");
+  return db.transaction("rw", db.categories, async () => {
+    const all = await db.categories.toArray();
+    const duplicate = all.some(
+      (category) =>
+        category.id !== existingId &&
+        !category.archived &&
+        category.type === payload.type &&
+        category.name.toLowerCase() === payload.name.toLowerCase(),
+    );
+    if (duplicate) throw new Error("A category with this name already exists");
 
-  if (existingId) {
-    const existing = await db.categories.get(existingId);
-    if (!existing) throw new Error("Category not found");
-    await db.categories.put({ ...existing, ...payload });
-    return existingId;
-  }
+    if (existingId) {
+      const existing = await db.categories.get(existingId);
+      if (!existing) throw new Error("Category not found");
+      await db.categories.put({ ...existing, ...payload });
+      return existingId;
+    }
 
-  const id = crypto.randomUUID();
-  await db.categories.add({
-    ...payload,
-    id,
-    archived: false,
-    createdAt: new Date().toISOString(),
+    const id = crypto.randomUUID();
+    await db.categories.add({
+      ...payload,
+      id,
+      archived: false,
+      createdAt: new Date().toISOString(),
+    });
+    return id;
   });
-  return id;
 }
 
 export async function setCategoryArchived(
   id: string,
   archived: boolean,
 ): Promise<void> {
-  const category = await db.categories.get(id);
-  if (!category) throw new Error("Category not found");
-  if (archived && (await activeCountOfType(category.type, id)) === 0) {
-    throw new Error(lastOfTypeMessage(category.type));
-  }
-  await db.categories.update(id, { archived });
+  await db.transaction("rw", db.categories, db.transactions, async () => {
+    const category = await db.categories.get(id);
+    if (!category) throw new Error("Category not found");
+    if (archived && (await activeCountOfType(category.type, id)) === 0) {
+      throw new Error(lastOfTypeMessage(category.type));
+    }
+    await db.categories.update(id, { archived });
+  });
 }
 
 export async function deleteCategory(id: string): Promise<void> {
-  const category = await db.categories.get(id);
-  if (!category) return;
-  if ((await usageCount(id)) > 0) {
-    throw new Error("This category has transactions — archive it instead");
-  }
-  if (!category.archived && (await activeCountOfType(category.type, id)) === 0) {
-    throw new Error(lastOfTypeMessage(category.type));
-  }
-  await db.budgets.where("categoryId").equals(id).delete();
-  await db.categories.delete(id);
+  await db.transaction("rw", db.categories, db.transactions, db.budgets, async () => {
+    const category = await db.categories.get(id);
+    if (!category) return;
+    if ((await usageCount(id)) > 0) {
+      throw new Error("This category has transactions — archive it instead");
+    }
+    if (!category.archived && (await activeCountOfType(category.type, id)) === 0) {
+      throw new Error(lastOfTypeMessage(category.type));
+    }
+    await db.budgets.where("categoryId").equals(id).delete();
+    await db.categories.delete(id);
+  });
 }
 
 export interface SaveRecurringResult {
@@ -191,40 +206,86 @@ export async function saveRecurring(
 ): Promise<SaveRecurringResult> {
   const payload = { ...values, amount: round2(values.amount), note: values.note ?? "" };
 
-  let id: string;
-  if (existingId) {
-    const existing = await db.recurring.get(existingId);
-    if (!existing) throw new Error("Recurring item not found");
-    const nextDueDate =
-      payload.startDate > existing.nextDueDate
-        ? payload.startDate
-        : existing.nextDueDate;
-    await db.recurring.put({ ...existing, ...payload, nextDueDate });
-    id = existingId;
-  } else {
-    id = crypto.randomUUID();
-    await db.recurring.add({
-      ...payload,
-      id,
-      nextDueDate: payload.startDate,
-      active: true,
-      createdAt: new Date().toISOString(),
-    });
-  }
+  return db.transaction("rw", db.recurring, db.transactions, async () => {
+    let id: string;
+    if (existingId) {
+      const existing = await db.recurring.get(existingId);
+      if (!existing) throw new Error("Recurring item not found");
+      const nextDueDate =
+        payload.startDate > existing.nextDueDate
+          ? payload.startDate
+          : existing.nextDueDate;
+      await db.recurring.put({ ...existing, ...payload, nextDueDate });
+      id = existingId;
+    } else {
+      id = crypto.randomUUID();
+      await db.recurring.add({
+        ...payload,
+        id,
+        nextDueDate: payload.startDate,
+        active: true,
+        createdAt: new Date().toISOString(),
+      });
+    }
 
-  const created = await materializeRecurring();
-  return { id, created };
+    const created = await materializeRecurring();
+    return { id, created };
+  });
 }
 
 export async function setRecurringActive(id: string, active: boolean): Promise<void> {
-  const item = await db.recurring.get(id);
-  if (!item) throw new Error("Recurring item not found");
-  await db.recurring.update(id, { active });
+  await db.transaction("rw", db.recurring, async () => {
+    const item = await db.recurring.get(id);
+    if (!item) throw new Error("Recurring item not found");
+    await db.recurring.update(id, { active });
+  });
 }
 
 export async function deleteRecurring(id: string): Promise<void> {
   await db.transaction("rw", db.recurring, db.transactions, async () => {
     await db.transactions.where("recurringId").equals(id).modify({ recurringId: null });
     await db.recurring.delete(id);
+  });
+}
+
+export async function saveSalaryRecord(
+  values: SalaryFormValues,
+  existingId?: string,
+): Promise<string> {
+  return db.transaction("rw", db.salary, async () => {
+    const payload = {
+      ...values,
+      grossPay: round2(values.grossPay),
+      allowances: values.allowances.map((line) => ({
+        ...line,
+        amount: round2(line.amount),
+      })),
+      deductions: values.deductions.map((line) => ({
+        ...line,
+        amount: round2(line.amount),
+      })),
+      note: values.note ?? "",
+    };
+
+    if (existingId) {
+      const existing = await db.salary.get(existingId);
+      if (!existing) throw new Error("Salary record not found");
+      await db.salary.put({ ...existing, ...payload });
+      return existingId;
+    }
+
+    const id = crypto.randomUUID();
+    await db.salary.add({
+      ...payload,
+      id,
+      createdAt: new Date().toISOString(),
+    });
+    return id;
+  });
+}
+
+export async function deleteSalaryRecord(id: string): Promise<void> {
+  await db.transaction("rw", db.salary, async () => {
+    await db.salary.delete(id);
   });
 }

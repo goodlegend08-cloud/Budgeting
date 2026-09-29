@@ -1,6 +1,6 @@
 const { chromium } = require("playwright");
 
-const BASE = "http://localhost:3000";
+const BASE = process.env.E2E_BASE_URL || "http://localhost:3000";
 const results = [];
 const errors = [];
 

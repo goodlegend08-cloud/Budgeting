@@ -1,6 +1,6 @@
 const { chromium } = require("playwright");
 
-const BASE = "http://localhost:3000";
+const BASE = process.env.E2E_BASE_URL || "http://localhost:3000";
 const results = [];
 const errors = [];
 
@@ -33,6 +33,7 @@ function check(name, ok, detail = "") {
     .click();
   await page.locator("#note").fill("Weekly shop");
   await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.waitFor({ state: "detached" });
 
   await page
     .getByText("Weekly shop")
@@ -64,11 +65,12 @@ function check(name, ok, detail = "") {
   check("edit form prefills amount", prefilled === "12.5", `got "${prefilled}"`);
   await page.locator("#amount").fill("42.75");
   await editDialog.getByRole("button", { name: "Save changes" }).click();
+  await editDialog.waitFor({ state: "detached" });
   await page
-    .getByText(/\$42\.75/)
+    .getByText(/\₱42\.75/)
     .waitFor()
     .catch(() => {});
-  check("edit saves new amount", (await page.getByText(/\$42\.75/).count()) > 0);
+  check("edit saves new amount", (await page.getByText(/\₱42\.75/).count()) > 0);
 
   // --- validation ---
   await page.getByRole("button", { name: "Add transaction" }).first().click();
@@ -105,6 +107,7 @@ function check(name, ok, detail = "") {
   const confirm = page.getByRole("alertdialog");
   await confirm.waitFor();
   await confirm.getByRole("button", { name: "Delete" }).click();
+  await confirm.waitFor({ state: "detached" });
   await page
     .getByText("Weekly shop")
     .waitFor({ state: "detached" })

@@ -1,6 +1,6 @@
 const { chromium } = require("playwright");
 
-const BASE = "http://localhost:3000";
+const BASE = process.env.E2E_BASE_URL || "http://localhost:3000";
 const results = [];
 const errors = [];
 
@@ -59,7 +59,7 @@ async function openForm(page) {
     .catch(() => {});
   const created =
     (await page.getByText("Pets").count()) > 0 &&
-    (await page.getByText("$75.00/month").count()) > 0;
+    (await page.getByText("₱75.00/month").count()) > 0;
   check("create category with monthly limit", created);
 
   // --- duplicate name rejected ---
@@ -96,10 +96,10 @@ async function openForm(page) {
   await page.locator("#category-limit").fill("120");
   await editDialog.getByRole("button", { name: "Save changes" }).click();
   await page
-    .getByText("$120.00/month")
+    .getByText("₱120.00/month")
     .waitFor()
     .catch(() => {});
-  check("edit saves new limit", (await page.getByText("$120.00/month").count()) > 0);
+  check("edit saves new limit", (await page.getByText("₱120.00/month").count()) > 0);
 
   // --- new category available in transaction form ---
   await page.goto(`${BASE}/transactions`);
