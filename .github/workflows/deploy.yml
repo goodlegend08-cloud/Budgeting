@@ -38,6 +38,8 @@ jobs:
         run: npm run typecheck
 
       - name: Publish to gh-pages
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           cd out
           touch .nojekyll
