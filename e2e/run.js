@@ -9,6 +9,7 @@ const SUITES = [
   "dashboard.js",
   "recurring.js",
   "salary.js",
+  "import.js",
 ];
 const ROOT = path.resolve(__dirname, "..");
 

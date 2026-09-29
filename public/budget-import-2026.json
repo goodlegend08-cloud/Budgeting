@@ -1,0 +1,207 @@
+{
+  "version": 1,
+  "source": "Google Sheet — Annual Budget Dashboard - 2026",
+  "categories": [
+    {
+      "name": "Debts",
+      "type": "expense",
+      "icon": "💸",
+      "color": "#f43f5e"
+    },
+    {
+      "name": "Savings",
+      "type": "expense",
+      "icon": "🏦",
+      "color": "#0d9488"
+    },
+    {
+      "name": "Necessities",
+      "type": "expense",
+      "icon": "🧺",
+      "color": "#f59e0b"
+    },
+    {
+      "name": "Transport",
+      "type": "expense",
+      "icon": "🚇",
+      "color": "#0ea5e9"
+    },
+    {
+      "name": "Shopping",
+      "type": "expense",
+      "icon": "🛍️",
+      "color": "#ec4899"
+    },
+    {
+      "name": "Fees & Documents",
+      "type": "expense",
+      "icon": "📄",
+      "color": "#64748b"
+    }
+  ],
+  "transactions": [
+    {
+      "date": "2026-09-15",
+      "amount": 500.0,
+      "type": "expense",
+      "category": "Transport",
+      "note": "Gasoline"
+    },
+    {
+      "date": "2026-09-15",
+      "amount": 1000.0,
+      "type": "expense",
+      "category": "Shopping",
+      "note": "Mini Washing"
+    },
+    {
+      "date": "2026-09-15",
+      "amount": 1500.0,
+      "type": "expense",
+      "category": "Necessities",
+      "note": "Necessities"
+    },
+    {
+      "date": "2026-09-15",
+      "amount": 214.0,
+      "type": "expense",
+      "category": "Shopping",
+      "note": "Portable Vaccum"
+    },
+    {
+      "date": "2026-09-15",
+      "amount": 2000.0,
+      "type": "expense",
+      "category": "Savings",
+      "note": "Savings"
+    },
+    {
+      "date": "2026-09-15",
+      "amount": 400.0,
+      "type": "expense",
+      "category": "Debts",
+      "note": "Utang kay Justine"
+    },
+    {
+      "date": "2026-09-15",
+      "amount": 300.0,
+      "type": "expense",
+      "category": "Debts",
+      "note": "Utang kay Kenneth"
+    },
+    {
+      "date": "2026-09-15",
+      "amount": 3300.0,
+      "type": "expense",
+      "category": "Debts",
+      "note": "Utang kay Tatay"
+    },
+    {
+      "date": "2026-09-24",
+      "amount": 100.0,
+      "type": "expense",
+      "category": "Fees & Documents",
+      "note": "Landbank Opening"
+    },
+    {
+      "date": "2026-09-25",
+      "amount": 200.0,
+      "type": "expense",
+      "category": "Fees & Documents",
+      "note": "Tatak ng Notary"
+    },
+    {
+      "date": "2026-09-26",
+      "amount": 100.0,
+      "type": "expense",
+      "category": "Fees & Documents",
+      "note": "Passport Photos & Laminate ID"
+    }
+  ],
+  "budgets": [
+    {
+      "month": "2026-09",
+      "category": "Debts",
+      "limit": 4000.0
+    },
+    {
+      "month": "2026-09",
+      "category": "Fees & Documents",
+      "limit": 400.0
+    },
+    {
+      "month": "2026-09",
+      "category": "Necessities",
+      "limit": 1500.0
+    },
+    {
+      "month": "2026-09",
+      "category": "Savings",
+      "limit": 2000.0
+    },
+    {
+      "month": "2026-09",
+      "category": "Shopping",
+      "limit": 1214.0
+    },
+    {
+      "month": "2026-09",
+      "category": "Transport",
+      "limit": 500.0
+    }
+  ],
+  "salary": [
+    {
+      "date": "2026-09-15",
+      "label": "September 2026 Salary",
+      "grossPay": 16925.0,
+      "allowances": [],
+      "deductions": [
+        {
+          "name": "Standard deductions",
+          "amount": 1916.38
+        }
+      ],
+      "note": "SG2 Basic ₱14,925.00 + PERA ₱2,000.00"
+    },
+    {
+      "date": "2026-10-15",
+      "label": "October 2026 Salary",
+      "grossPay": 16925.0,
+      "allowances": [],
+      "deductions": [
+        {
+          "name": "Standard deductions",
+          "amount": 1916.38
+        }
+      ],
+      "note": "SG2 Basic ₱14,925.00 + PERA ₱2,000.00"
+    },
+    {
+      "date": "2026-11-15",
+      "label": "November 2026 Salary",
+      "grossPay": 16925.0,
+      "allowances": [],
+      "deductions": [
+        {
+          "name": "Standard deductions",
+          "amount": 1916.38
+        }
+      ],
+      "note": "SG2 Basic ₱14,925.00 + PERA ₱2,000.00"
+    },
+    {
+      "date": "2026-12-15",
+      "label": "December 2026 Salary",
+      "grossPay": 16925.0,
+      "allowances": [],
+      "deductions": [
+        {
+          "name": "Standard deductions",
+          "amount": 1916.38
+        }
+      ],
+      "note": "SG2 Basic ₱14,925.00 + PERA ₱2,000.00"
+    }
+  ]
+}

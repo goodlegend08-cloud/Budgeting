@@ -4,10 +4,22 @@ import { round2, localTodayISO } from "@/lib/format";
 import { advanceDate, recurringNote } from "@/lib/recurring";
 import type {
   CategoryFormValues,
+  ImportFile,
   RecurringFormValues,
   SalaryFormValues,
   TransactionFormValues,
 } from "@/lib/schemas";
+
+/**
+ * Resolve only once a write has provably committed: IndexedDB runs a later
+ * read on the same store after an earlier write has finished, so reading the
+ * row back both waits for the commit and confirms its outcome. Without it a
+ * navigation inside the commit window can roll the write back.
+ */
+async function verify(check: () => Promise<boolean>, message: string): Promise<void> {
+  const ok = await check();
+  if (!ok) throw new Error(message);
+}
 
 export async function saveTransaction(
   values: TransactionFormValues,
@@ -288,4 +300,158 @@ export async function deleteSalaryRecord(id: string): Promise<void> {
   await db.transaction("rw", db.salary, async () => {
     await db.salary.delete(id);
   });
+}
+
+export interface ImportResult {
+  categories: number;
+  transactions: number;
+  budgets: number;
+  salary: number;
+  skipped: number;
+}
+
+export async function importBudgetData(input: ImportFile): Promise<ImportResult> {
+  const result: ImportResult = {
+    categories: 0,
+    transactions: 0,
+    budgets: 0,
+    salary: 0,
+    skipped: 0,
+  };
+  const now = new Date().toISOString();
+  const before = await db.transactions.count();
+
+  await db.transaction(
+    "rw",
+    db.categories,
+    db.transactions,
+    db.budgets,
+    db.salary,
+    async () => {
+      const byName = new Map(
+        (await db.categories.toArray()).map((category) => [
+          category.name.trim().toLowerCase(),
+          category,
+        ]),
+      );
+
+      const ensureCategory = async (item: {
+        name: string;
+        type: "income" | "expense";
+        icon: string;
+        color: string;
+      }) => {
+        const key = item.name.trim().toLowerCase();
+        const found = byName.get(key);
+        if (found) return found;
+        const created = {
+          id: crypto.randomUUID(),
+          name: item.name.trim(),
+          type: item.type,
+          icon: item.icon,
+          color: item.color,
+          monthlyLimit: null,
+          archived: false,
+          createdAt: now,
+        };
+        await db.categories.add(created);
+        byName.set(key, created);
+        result.categories += 1;
+        return created;
+      };
+
+      for (const item of input.categories) await ensureCategory(item);
+
+      const resolveCategory = (name: string) =>
+        byName.get(name.trim().toLowerCase()) ??
+        (name.trim() === "" ? byName.get("other") : undefined);
+
+      for (const item of input.transactions) {
+        const category = resolveCategory(item.category);
+        if (!category) {
+          throw new Error(
+            `No category named "${item.category}" — list it in the file's categories`,
+          );
+        }
+        const amount = round2(item.amount);
+        const duplicate = await db.transactions
+          .where("date")
+          .equals(item.date)
+          .filter(
+            (row) =>
+              row.amount === amount &&
+              row.type === item.type &&
+              row.categoryId === category.id &&
+              row.note === item.note,
+          )
+          .count();
+        if (duplicate > 0) {
+          result.skipped += 1;
+          continue;
+        }
+        await db.transactions.add({
+          id: crypto.randomUUID(),
+          date: item.date,
+          amount,
+          type: item.type,
+          categoryId: category.id,
+          note: item.note,
+          recurringId: null,
+          createdAt: now,
+        });
+        result.transactions += 1;
+      }
+
+      for (const item of input.budgets) {
+        const category = resolveCategory(item.category);
+        if (!category) {
+          throw new Error(
+            `No category named "${item.category}" — list it in the file's categories`,
+          );
+        }
+        const limit = round2(item.limit);
+        await db.budgets.put({
+          id: budgetId(item.month, category.id),
+          month: item.month,
+          categoryId: category.id,
+          limit,
+        });
+        result.budgets += 1;
+      }
+
+      for (const item of input.salary) {
+        const duplicate = await db.salary
+          .filter((row) => row.date === item.date && row.label === item.label)
+          .count();
+        if (duplicate > 0) {
+          result.skipped += 1;
+          continue;
+        }
+        await db.salary.add({
+          id: crypto.randomUUID(),
+          label: item.label,
+          date: item.date,
+          grossPay: round2(item.grossPay),
+          allowances: item.allowances.map((line) => ({
+            name: line.name,
+            amount: round2(line.amount),
+          })),
+          deductions: item.deductions.map((line) => ({
+            name: line.name,
+            amount: round2(line.amount),
+          })),
+          note: item.note,
+          createdAt: now,
+        });
+        result.salary += 1;
+      }
+    },
+  );
+
+  const after = await db.transactions.count();
+  await verify(
+    async () => after === before + result.transactions,
+    "Could not import all transactions",
+  );
+  return result;
 }

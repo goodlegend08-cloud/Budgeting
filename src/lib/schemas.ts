@@ -180,3 +180,52 @@ export const salaryFormSchema = z.object({
   note: z.string().max(200, "Note is too long").default(""),
 });
 export type SalaryFormValues = z.infer<typeof salaryFormSchema>;
+
+export const importCategorySchema = z.object({
+  name: z.string().trim().min(1).max(40),
+  type: transactionTypeSchema.default("expense"),
+  icon: z.string().min(1).default("📝"),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .default("#78716c"),
+});
+
+export const importTransactionSchema = z.object({
+  date: isoDateSchema,
+  amount: z.coerce
+    .number({ error: "Amount must be a number" })
+    .positive("Amount must be greater than zero"),
+  type: transactionTypeSchema.default("expense"),
+  category: z.string().min(1),
+  note: z.string().max(200).default(""),
+});
+
+export const importBudgetSchema = z.object({
+  month: z.string().regex(/^\d{4}-\d{2}$/, "Month must look like 2026-09"),
+  category: z.string().min(1),
+  limit: z.coerce
+    .number({ error: "Limit must be a number" })
+    .nonnegative("Limit cannot be negative"),
+});
+
+export const importSalarySchema = z.object({
+  date: isoDateSchema,
+  label: z.string().min(1).max(60),
+  grossPay: z.coerce
+    .number({ error: "Gross pay must be a number" })
+    .positive("Gross pay must be greater than zero"),
+  allowances: z.array(salaryLineSchema).default([]),
+  deductions: z.array(salaryLineSchema).default([]),
+  note: z.string().max(200).default(""),
+});
+
+export const importFileSchema = z.object({
+  version: z.literal(1),
+  source: z.string().max(200).optional(),
+  categories: z.array(importCategorySchema).default([]),
+  transactions: z.array(importTransactionSchema).default([]),
+  budgets: z.array(importBudgetSchema).default([]),
+  salary: z.array(importSalarySchema).default([]),
+});
+export type ImportFile = z.infer<typeof importFileSchema>;
