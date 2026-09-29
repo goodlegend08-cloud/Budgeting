@@ -1,0 +1,11 @@
+{
+  "name": "budgeting-e2e",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test": "node run.js"
+  },
+  "dependencies": {
+    "playwright": "^1.63.0"
+  }
+}
