@@ -95,6 +95,7 @@ async function openForm(page) {
   check("edit form prefills name", prefilledName === "Pets", `got "${prefilledName}"`);
   await page.locator("#category-limit").fill("120");
   await editDialog.getByRole("button", { name: "Save changes" }).click();
+  await editDialog.waitFor({ state: "detached" });
   await page
     .getByText("₱120.00/month")
     .waitFor()
@@ -118,6 +119,7 @@ async function openForm(page) {
   await petsOption.first().click();
   await page.locator("#note").fill("Vet visit");
   await txDialog.getByRole("button", { name: "Add transaction" }).click();
+  await txDialog.waitFor({ state: "detached" });
   await page
     .getByText("Vet visit")
     .waitFor()
