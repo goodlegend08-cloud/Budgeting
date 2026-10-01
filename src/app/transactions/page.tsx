@@ -6,6 +6,7 @@ import { useFilteredTransactions } from "@/hooks/use-filtered-transactions";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { ImportButton } from "@/components/import-dialog";
+import { ExportButton } from "@/components/export-dialog";
 import { PageHeader } from "@/components/page-header";
 import { SummaryCards } from "@/components/transactions/summary-cards";
 import { TransactionFilters } from "@/components/transactions/transaction-filters";
@@ -22,6 +23,7 @@ export default function TransactionsPage() {
         title="Transactions"
         description={`${transactions.length} ${transactions.length === 1 ? "entry" : "entries"}`}
       >
+        <ExportButton />
         <ImportButton />
         <Button type="button" onClick={openCreateDialog}>
           <PlusIcon data-icon="inline-start" />
