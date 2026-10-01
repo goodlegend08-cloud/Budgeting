@@ -2,6 +2,7 @@ import { budgetId } from "@/lib/budgets";
 import { db } from "@/lib/db";
 import { round2, localTodayISO } from "@/lib/format";
 import { advanceDate, recurringNote } from "@/lib/recurring";
+import { splitSalary } from "@/lib/salary";
 import type {
   CategoryFormValues,
   ImportFile,
@@ -263,8 +264,9 @@ export async function deleteRecurring(id: string): Promise<void> {
 export async function saveSalaryRecord(
   values: SalaryFormValues,
   existingId?: string,
+  split = false,
 ): Promise<string> {
-  return db.transaction("rw", db.salary, async () => {
+  const ids = await db.transaction("rw", db.salary, async () => {
     const payload = {
       ...values,
       grossPay: round2(values.grossPay),
@@ -283,17 +285,29 @@ export async function saveSalaryRecord(
       const existing = await db.salary.get(existingId);
       if (!existing) throw new Error("Salary record not found");
       await db.salary.put({ ...existing, ...payload });
-      return existingId;
+      return [existingId];
+    }
+
+    const createdAt = new Date().toISOString();
+    if (split) {
+      const [first, second] = splitSalary(payload);
+      const firstId = crypto.randomUUID();
+      const secondId = crypto.randomUUID();
+      await db.salary.add({ ...first, id: firstId, createdAt });
+      await db.salary.add({ ...second, id: secondId, createdAt });
+      return [firstId, secondId];
     }
 
     const id = crypto.randomUUID();
-    await db.salary.add({
-      ...payload,
-      id,
-      createdAt: new Date().toISOString(),
-    });
-    return id;
+    await db.salary.add({ ...payload, id, createdAt });
+    return [id];
   });
+
+  await verify(
+    async () => (await db.salary.where("id").anyOf(ids).count()) === ids.length,
+    "Could not save salary record",
+  );
+  return ids[0];
 }
 
 export async function deleteSalaryRecord(id: string): Promise<void> {

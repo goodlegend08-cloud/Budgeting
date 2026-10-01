@@ -4,9 +4,10 @@ import * as React from "react";
 import { PlusIcon, SaveIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { saveSalaryRecord } from "@/lib/actions";
-import { localTodayISO, formatMoney } from "@/lib/format";
-import { ALLOWANCE_PRESETS, DEDUCTION_PRESETS } from "@/lib/salary";
+import { formatMoney, localTodayISO, round2 } from "@/lib/format";
+import { ALLOWANCE_PRESETS, DEDUCTION_PRESETS, paydayISOsInMonth } from "@/lib/salary";
 import { salaryFormSchema, type SalaryRecord } from "@/lib/schemas";
+import { format, parseISO } from "date-fns";
 import { useSettings } from "@/hooks/use-db";
 import { Button } from "@/components/ui/button";
 import {
@@ -146,6 +147,7 @@ function FormBody({
     editing?.deductions.map(toLine) ?? [],
   );
   const [note, setNote] = React.useState(editing?.note ?? "");
+  const [split, setSplit] = React.useState(false);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [saving, setSaving] = React.useState(false);
 
@@ -154,6 +156,9 @@ function FormBody({
   const allowanceTotal = lineTotal(allowances);
   const deductionTotal = lineTotal(deductions);
   const net = gross + allowanceTotal - deductionTotal;
+  const [firstPayday, secondPayday] = paydayISOsInMonth(date || localTodayISO());
+  const netFirst = round2(net / 2);
+  const netSecond = round2(net - netFirst);
 
   function updateLine(
     kind: "allowances" | "deductions",
@@ -202,8 +207,14 @@ function FormBody({
 
     setSaving(true);
     try {
-      await saveSalaryRecord(result.data, editing?.id);
-      toast.success(isEditing ? "Salary record updated" : "Salary record saved");
+      await saveSalaryRecord(result.data, editing?.id, split && !isEditing);
+      toast.success(
+        split && !isEditing
+          ? "2 salary records saved — 8th and 23rd"
+          : isEditing
+            ? "Salary record updated"
+            : "Salary record saved",
+      );
       onClose();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save record");
@@ -331,6 +342,40 @@ function FormBody({
             {formatMoney(net, settings.currency)}
           </span>
         </div>
+
+        {!isEditing && (
+          <div className="grid gap-2">
+            <label
+              htmlFor="split-paydays"
+              className="flex cursor-pointer items-start gap-2.5 rounded-lg border bg-muted/50 px-3 py-2.5 text-sm"
+            >
+              <input
+                id="split-paydays"
+                data-testid="split-paydays"
+                type="checkbox"
+                checked={split}
+                onChange={(event) => setSplit(event.target.checked)}
+                className="mt-0.5 size-4 accent-primary"
+              />
+              <span className="grid gap-0.5">
+                <span className="font-medium">
+                  Split into 2 paydays — 8th &amp; 23rd
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Saves two half-pay records for this month instead of one.
+                </span>
+              </span>
+            </label>
+            {split && (
+              <p className="text-xs text-muted-foreground">
+                Saves {formatMoney(netFirst, settings.currency)} on{" "}
+                {format(parseISO(firstPayday), "d MMM")} ·{" "}
+                {formatMoney(netSecond, settings.currency)} on{" "}
+                {format(parseISO(secondPayday), "d MMM")}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="grid gap-2">
           <Label htmlFor="salary-note">Note</Label>

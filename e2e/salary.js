@@ -25,6 +25,16 @@ function check(name, ok, detail = "") {
     (await page.getByText("No salary records yet").count()) > 0,
   );
 
+  const paydayBadge = await page
+    .getByTestId("next-payday")
+    .textContent()
+    .catch(() => null);
+  check(
+    "next payday badge shown",
+    Boolean(paydayBadge) && paydayBadge.includes("Next payday"),
+    paydayBadge ?? "missing",
+  );
+
   // --- validation ---
   await page.getByRole("button", { name: "New salary record" }).first().click();
   const dialog = page.getByRole("dialog");
@@ -125,6 +135,58 @@ function check(name, ok, detail = "") {
   check(
     "delete removes the record",
     (await page.getByText("No salary records yet").count()) > 0,
+  );
+
+  // --- split into the 8th & 23rd paydays ---
+  const now = new Date();
+  const monthName = now.toLocaleString("en-US", { month: "long" });
+  const shortMonth = now.toLocaleString("en-US", { month: "short" });
+  const paydayA = `8 ${shortMonth}`;
+  const paydayB = `23 ${shortMonth}`;
+
+  await page.getByRole("button", { name: "New salary record" }).first().click();
+  const splitDialog = page.getByRole("dialog");
+  await splitDialog.waitFor();
+  await page.locator("#salary-label").fill(`${monthName} salary`);
+  await page.locator("#salary-gross").fill("16000");
+  await page.getByTestId("split-paydays").check();
+  const preview = await splitDialog.textContent();
+  check(
+    "split preview shows both paydays",
+    preview.includes(paydayA) &&
+      preview.includes(paydayB) &&
+      preview.includes("₱8,000.00"),
+    preview.slice(-140).replace(/\s+/g, " "),
+  );
+
+  await splitDialog.getByRole("button", { name: "Save record" }).click();
+  await splitDialog.waitFor({ state: "detached" });
+  const splitToast = await page
+    .getByText("2 salary records saved — 8th and 23rd")
+    .waitFor({ timeout: 10000 })
+    .then(() => true)
+    .catch(() => false);
+  check("split save toast", splitToast);
+
+  const splitMain = await page.locator("main").textContent();
+  check(
+    "two half records created",
+    (await page
+      .getByText(`${monthName} salary · 1st half`, { exact: true })
+      .count()) === 1 &&
+      (await page
+        .getByText(`${monthName} salary · 2nd half`, { exact: true })
+        .count()) === 1,
+  );
+  check(
+    "records dated 8th and 23rd",
+    splitMain.includes(`8 ${shortMonth}`) && splitMain.includes(`23 ${shortMonth}`),
+    `month=${shortMonth}`,
+  );
+  check(
+    "each half nets ₱8,000",
+    (splitMain.match(/₱8,000\.00/g) || []).length >= 2,
+    `count=${(splitMain.match(/₱8,000\.00/g) || []).length}`,
   );
 
   await browser.close();
