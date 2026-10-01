@@ -16,10 +16,13 @@ import {
 } from "@/components/ui/dialog";
 
 function formatError(error: { issues: { path: PropertyKey[]; message: string }[] }) {
-  const first = error.issues[0];
-  if (!first) return "That file could not be read";
-  const path = first.path.join(".");
-  return path ? `${path}: ${first.message}` : first.message;
+  const shown = error.issues.slice(0, 5).map((issue) => {
+    const path = issue.path.join(".");
+    return path ? `${path}: ${issue.message}` : issue.message;
+  });
+  if (!shown.length) return "That file could not be read";
+  const rest = error.issues.length - shown.length;
+  return `${shown.join(" · ")}${rest > 0 ? ` (+${rest} more)` : ""}`;
 }
 
 function total(data: ImportFile) {

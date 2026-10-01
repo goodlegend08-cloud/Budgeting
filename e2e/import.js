@@ -69,6 +69,57 @@ async function summaryCounts(dialog) {
   await dialog.getByRole("button", { name: "Cancel" }).click();
   await dialog.waitFor({ state: "detached" });
 
+  // --- version written as a string is accepted ---
+  const versionFile = (version) =>
+    Buffer.from(
+      JSON.stringify({
+        version,
+        categories: [{ name: "Solo", type: "expense", icon: "📝", color: "#78716c" }],
+      }),
+    );
+
+  dialog = await openImport(page);
+  await page.getByTestId("import-file").setInputFiles({
+    name: "version-string.json",
+    mimeType: "application/json",
+    buffer: versionFile("1.0"),
+  });
+  await dialog.locator("dt", { hasText: "Categories" }).waitFor({ timeout: 5000 });
+  const stringVersionCount = await dialog
+    .locator("dt", { hasText: "Categories" })
+    .locator("+ dd")
+    .textContent();
+  check(
+    'version "1.0" is accepted',
+    stringVersionCount?.trim() === "1" &&
+      (await dialog.locator("p.text-destructive").count()) === 0,
+    `count=${stringVersionCount?.trim()}`,
+  );
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await dialog.waitFor({ state: "detached" });
+
+  // --- an unknown version is still rejected, with a readable message ---
+  dialog = await openImport(page);
+  await page.getByTestId("import-file").setInputFiles({
+    name: "version-2.json",
+    mimeType: "application/json",
+    buffer: versionFile(2),
+  });
+  const versionRejected = await dialog
+    .getByText(/version/i)
+    .first()
+    .waitFor({ timeout: 5000 })
+    .then(() => true)
+    .catch(() => false);
+  check("version 2 is rejected with a readable error", versionRejected);
+  check(
+    "unknown version cannot be imported",
+    (await dialog.getByRole("button", { name: "Import", exact: true }).isDisabled()) ===
+      true,
+  );
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await dialog.waitFor({ state: "detached" });
+
   // --- real import file ---
   dialog = await openImport(page);
   await page.getByTestId("import-file").setInputFiles(FILE);

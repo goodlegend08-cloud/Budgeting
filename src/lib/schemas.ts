@@ -231,7 +231,17 @@ export const removeBudgetSchema = z.object({
 });
 
 export const importFileSchema = z.object({
-  version: z.literal(1),
+  version: z.preprocess(
+    (value) => {
+      if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
+      if (typeof value === "string") {
+        const numeric = Number(value.trim().replace(/^v/i, ""));
+        if (Number.isFinite(numeric)) return Math.trunc(numeric);
+      }
+      return 1;
+    },
+    z.literal(1, { error: "Expected 1 (this importer reads version 1 files)" }),
+  ),
   source: z.string().max(200).optional(),
   categories: z.array(importCategorySchema).default([]),
   transactions: z.array(importTransactionSchema).default([]),
