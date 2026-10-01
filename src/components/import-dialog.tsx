@@ -70,6 +70,23 @@ function ImportDialog({
     setError(null);
     if (!file) return;
 
+    if (/\.(xlsx|xlsm|xls|csv)$/i.test(file.name)) {
+      try {
+        const { excelToImport } = await import("@/lib/excel-import");
+        const result = await excelToImport(await file.arrayBuffer());
+        if (total(result.data) === 0) {
+          setError(
+            "No budget rows found in that workbook — it needs label and amount columns (or the Block-style layout).",
+          );
+          return;
+        }
+        setParsed(result.data);
+      } catch {
+        setError("That workbook could not be read");
+      }
+      return;
+    }
+
     let json: unknown;
     try {
       json = JSON.parse(await file.text());
@@ -119,9 +136,9 @@ function ImportDialog({
         <DialogHeader>
           <DialogTitle>Import budget data</DialogTitle>
           <DialogDescription>
-            Upload a JSON file with categories, transactions, budgets and salary
-            records. Duplicates are skipped, entries the file marks for removal are
-            replaced, and budget limits are updated.
+            Upload a JSON export or an Excel/CSV budget file. Duplicates are skipped,
+            entries the file marks for removal are replaced, and budget limits are
+            updated.
           </DialogDescription>
         </DialogHeader>
 
@@ -129,7 +146,7 @@ function ImportDialog({
           <input
             data-testid="import-file"
             type="file"
-            accept="application/json,.json"
+            accept="application/json,.json,.xlsx,.xlsm,.xls,.csv"
             className="cursor-pointer rounded-lg border border-dashed border-input bg-muted/30 px-3 py-4 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1 file:text-sm"
             onChange={(event) => void handleFile(event.target.files?.[0])}
           />

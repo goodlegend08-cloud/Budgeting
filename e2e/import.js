@@ -120,6 +120,57 @@ async function summaryCounts(dialog) {
   await dialog.getByRole("button", { name: "Cancel" }).click();
   await dialog.waitFor({ state: "detached" });
 
+  // --- Excel workbook, dashboard (Block) layout ---
+  dialog = await openImport(page);
+  await page
+    .getByTestId("import-file")
+    .setInputFiles(path.join(__dirname, "fixtures", "dashboard-sample.xlsx"));
+  await dialog.getByText("Transactions", { exact: true }).waitFor({ timeout: 20000 });
+  const excelCounts = await summaryCounts(dialog);
+  check(
+    "excel dashboard workbook counts",
+    excelCounts[0] === 6 &&
+      excelCounts[1] === 12 &&
+      excelCounts[2] === 6 &&
+      excelCounts[3] === 4,
+    JSON.stringify(excelCounts),
+  );
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await dialog.waitFor({ state: "detached" });
+
+  // --- Excel workbook, plain table layout ---
+  dialog = await openImport(page);
+  await page
+    .getByTestId("import-file")
+    .setInputFiles(path.join(__dirname, "fixtures", "simple-table.xlsx"));
+  await dialog.getByText("Transactions", { exact: true }).waitFor({ timeout: 20000 });
+  const tableCounts = await summaryCounts(dialog);
+  check(
+    "excel table workbook counts",
+    tableCounts[0] === 4 && tableCounts[1] === 4 && tableCounts[2] === 3,
+    JSON.stringify(tableCounts),
+  );
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await dialog.waitFor({ state: "detached" });
+
+  // --- Excel whose formula cells have no cached values ---
+  dialog = await openImport(page);
+  await page
+    .getByTestId("import-file")
+    .setInputFiles(path.join(__dirname, "fixtures", "formula-sample.xlsx"));
+  await dialog.getByText("Transactions", { exact: true }).waitFor({ timeout: 20000 });
+  const formulaCounts = await summaryCounts(dialog);
+  check(
+    "excel with uncached formulas still counts salary",
+    formulaCounts[0] === 6 &&
+      formulaCounts[1] === 12 &&
+      formulaCounts[2] === 6 &&
+      formulaCounts[3] === 4,
+    JSON.stringify(formulaCounts),
+  );
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await dialog.waitFor({ state: "detached" });
+
   // --- real import file ---
   dialog = await openImport(page);
   await page.getByTestId("import-file").setInputFiles(FILE);
