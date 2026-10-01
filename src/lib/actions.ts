@@ -308,6 +308,7 @@ export interface ImportResult {
   budgets: number;
   salary: number;
   skipped: number;
+  removed: number;
 }
 
 export async function importBudgetData(input: ImportFile): Promise<ImportResult> {
@@ -317,6 +318,7 @@ export async function importBudgetData(input: ImportFile): Promise<ImportResult>
     budgets: 0,
     salary: 0,
     skipped: 0,
+    removed: 0,
   };
   const now = new Date().toISOString();
   const before = await db.transactions.count();
@@ -365,6 +367,32 @@ export async function importBudgetData(input: ImportFile): Promise<ImportResult>
       const resolveCategory = (name: string) =>
         byName.get(name.trim().toLowerCase()) ??
         (name.trim() === "" ? byName.get("other") : undefined);
+
+      for (const item of input.removeTransactions) {
+        const category = resolveCategory(item.category);
+        if (!category) continue;
+        const stale = await db.transactions
+          .where("categoryId")
+          .equals(category.id)
+          .filter(
+            (row) => row.note.trim().toLowerCase() === item.note.trim().toLowerCase(),
+          )
+          .toArray();
+        for (const row of stale) {
+          await db.transactions.delete(row.id);
+          result.removed += 1;
+        }
+      }
+
+      for (const item of input.removeBudgets) {
+        const category = resolveCategory(item.category);
+        if (!category) continue;
+        const id = budgetId(item.month, category.id);
+        if ((await db.budgets.get(id)) !== undefined) {
+          await db.budgets.delete(id);
+          result.removed += 1;
+        }
+      }
 
       for (const item of input.transactions) {
         const category = resolveCategory(item.category);
@@ -450,7 +478,7 @@ export async function importBudgetData(input: ImportFile): Promise<ImportResult>
 
   const after = await db.transactions.count();
   await verify(
-    async () => after === before + result.transactions,
+    async () => after === before - result.removed + result.transactions,
     "Could not import all transactions",
   );
   return result;

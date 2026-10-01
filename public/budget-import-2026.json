@@ -104,30 +104,32 @@
       "note": "Landbank Opening"
     },
     {
-      "date": "2026-09-25",
-      "amount": 200.0,
-      "type": "expense",
-      "category": "Fees & Documents",
-      "note": "Tatak ng Notary"
-    },
-    {
       "date": "2026-09-26",
       "amount": 100.0,
       "type": "expense",
       "category": "Fees & Documents",
       "note": "Passport Photos & Laminate ID"
+    },
+    {
+      "date": "2026-09-30",
+      "amount": 1000.0,
+      "type": "expense",
+      "category": "Debts",
+      "note": "Additional Utang kay tatay"
+    },
+    {
+      "date": "2026-10-01",
+      "amount": 100.0,
+      "type": "expense",
+      "category": "Fees & Documents",
+      "note": "Tatak ng Notary"
     }
   ],
   "budgets": [
     {
       "month": "2026-09",
       "category": "Debts",
-      "limit": 4000.0
-    },
-    {
-      "month": "2026-09",
-      "category": "Fees & Documents",
-      "limit": 400.0
+      "limit": 5000.0
     },
     {
       "month": "2026-09",
@@ -148,6 +150,11 @@
       "month": "2026-09",
       "category": "Transport",
       "limit": 500.0
+    },
+    {
+      "month": "2026-10",
+      "category": "Fees & Documents",
+      "limit": 300.0
     }
   ],
   "salary": [
@@ -202,6 +209,18 @@
         }
       ],
       "note": "SG2 Basic ₱14,925.00 + PERA ₱2,000.00"
+    }
+  ],
+  "removeTransactions": [
+    {
+      "category": "Fees & Documents",
+      "note": "Tatak ng Notary"
+    }
+  ],
+  "removeBudgets": [
+    {
+      "month": "2026-09",
+      "category": "Fees & Documents"
     }
   ]
 }

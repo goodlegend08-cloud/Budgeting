@@ -18,13 +18,22 @@ async function openImport(page) {
 }
 
 async function summaryCounts(dialog) {
+  const labels = [
+    "Categories",
+    "Transactions",
+    "Budget limits",
+    "Salary records",
+    "Entries to replace",
+    "Limits to replace",
+  ];
   return Promise.all(
-    ["Categories", "Transactions", "Budget limits", "Salary records"].map(
-      async (label) => {
-        const row = dialog.locator("dt", { hasText: label }).locator("+ dd");
-        return row.textContent().then((text) => Number(text?.trim()));
-      },
-    ),
+    labels.map(async (label) => {
+      const cell = dialog.locator("dt", { hasText: label }).locator("+ dd");
+      const found = await cell.count();
+      if (!found) return 0;
+      const text = await cell.textContent();
+      return Number(text?.trim());
+    }),
   );
 }
 
@@ -67,38 +76,61 @@ async function summaryCounts(dialog) {
   const counts = await summaryCounts(dialog);
   check(
     "file summary counts",
-    counts[0] === 6 && counts[1] === 11 && counts[2] === 6 && counts[3] === 4,
+    counts[0] === 6 &&
+      counts[1] === 12 &&
+      counts[2] === 6 &&
+      counts[3] === 4 &&
+      counts[4] === 1 &&
+      counts[5] === 1,
     JSON.stringify(counts),
   );
 
   await dialog.getByRole("button", { name: "Import", exact: true }).click();
-  await page.getByText(/Imported 11 transactions/).waitFor({ timeout: 15000 });
-  check("import toast reports 11 transactions", true);
+  await page.getByText(/Imported 12 transactions/).waitFor({ timeout: 15000 });
+  check("import toast reports 12 transactions", true);
   await page
     .getByRole("dialog")
     .waitFor({ state: "detached" })
     .catch(() => {});
 
-  await page.getByText("Utang kay Tatay").waitFor({ timeout: 10000 });
+  await page.getByText("Utang kay Tatay", { exact: true }).waitFor({
+    timeout: 10000,
+  });
   check(
     "transactions list shows imported entries",
-    (await page.getByText("Utang kay Tatay").count()) > 0 &&
-      (await page.getByText("Passport Photos & Laminate ID").count()) > 0,
+    (await page.getByText("Utang kay Tatay", { exact: true }).count()) > 0 &&
+      (await page.getByText("Additional Utang kay tatay", { exact: true }).count()) >
+        0 &&
+      (await page.getByText("Passport Photos & Laminate ID", { exact: true }).count()) >
+        0,
   );
 
   // --- budgets page reflects the imported limits ---
   await page.goto(`${BASE}/budgets`);
   await page.getByRole("heading", { name: "Budgets" }).waitFor();
   await page
-    .getByText("Debts")
+    .getByText("Fees & Documents")
     .first()
     .waitFor({ timeout: 10000 })
     .catch(() => {});
-  const budgetsText = await page.locator("main").textContent();
+  const octoberText = await page.locator("main").textContent();
   check(
-    "imported budget limits shown",
-    budgetsText.includes("₱4,000.00") && budgetsText.includes("₱2,000.00"),
-    budgetsText.slice(0, 0),
+    "October budget covers the pre-salary spend",
+    octoberText.includes("₱300.00") && octoberText.includes("₱100.00"),
+    `octoberLimit=${octoberText.includes("₱300.00")}`,
+  );
+
+  await page.getByRole("button", { name: "Previous month" }).click();
+  await page.getByText("September 2026").first().waitFor({ timeout: 10000 });
+  const septemberText = await page.locator("main").textContent();
+  check(
+    "imported September budget limits shown",
+    septemberText.includes("₱5,000.00") &&
+      septemberText.includes("₱2,000.00") &&
+      septemberText.includes("₱1,500.00") &&
+      septemberText.includes("₱10,214.00") &&
+      septemberText.includes("Plus ₱200.00 outside budgets"),
+    `total=${septemberText.includes("₱10,214.00")}`,
   );
 
   // --- salary page shows the payroll records ---
@@ -120,8 +152,16 @@ async function summaryCounts(dialog) {
   await page.getByTestId("import-file").setInputFiles(FILE);
   await dialog.getByText("Transactions", { exact: true }).waitFor();
   await dialog.getByRole("button", { name: "Import", exact: true }).click();
-  await page.getByText(/Imported 0 transactions/).waitFor({ timeout: 15000 });
-  check("re-import skips existing entries", true);
+  await page
+    .getByText(/Imported 1 transactions.*\(1 replaced\)/)
+    .waitFor({ timeout: 15000 });
+  check("re-import replaces changed entries", true);
+  check(
+    "changed entry exists exactly once after re-import",
+    (await page.getByText("Tatak ng Notary", { exact: true }).count()) === 1 &&
+      (await page.getByText("12 entries", { exact: true }).count()) > 0,
+    `rows=${await page.getByText("Tatak ng Notary", { exact: true }).count()}`,
+  );
 
   await browser.close();
 

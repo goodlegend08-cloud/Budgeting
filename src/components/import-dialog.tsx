@@ -92,8 +92,9 @@ function ImportDialog({
     setBusy(true);
     try {
       const result = await importBudgetData(parsed);
+      const removed = result.removed > 0 ? ` (${result.removed} replaced)` : "";
       toast.success(
-        `Imported ${result.transactions} transactions, ${result.budgets} budgets, ${result.salary} salary records and ${result.categories} categories`,
+        `Imported ${result.transactions} transactions, ${result.budgets} budgets, ${result.salary} salary records and ${result.categories} categories${removed}`,
       );
       reset();
       onOpenChange(false);
@@ -116,7 +117,8 @@ function ImportDialog({
           <DialogTitle>Import budget data</DialogTitle>
           <DialogDescription>
             Upload a JSON file with categories, transactions, budgets and salary
-            records. Existing matching entries are skipped, nothing is overwritten.
+            records. Duplicates are skipped, entries the file marks for removal are
+            replaced, and budget limits are updated.
           </DialogDescription>
         </DialogHeader>
 
@@ -147,6 +149,22 @@ function ImportDialog({
                 <dd className="text-right tabular-nums">{parsed.budgets.length}</dd>
                 <dt className="text-muted-foreground">Salary records</dt>
                 <dd className="text-right tabular-nums">{parsed.salary.length}</dd>
+                {parsed.removeTransactions.length > 0 && (
+                  <>
+                    <dt className="text-muted-foreground">Entries to replace</dt>
+                    <dd className="text-right tabular-nums">
+                      {parsed.removeTransactions.length}
+                    </dd>
+                  </>
+                )}
+                {parsed.removeBudgets.length > 0 && (
+                  <>
+                    <dt className="text-muted-foreground">Limits to replace</dt>
+                    <dd className="text-right tabular-nums">
+                      {parsed.removeBudgets.length}
+                    </dd>
+                  </>
+                )}
               </dl>
             </div>
           )}

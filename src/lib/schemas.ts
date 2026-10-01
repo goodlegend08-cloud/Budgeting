@@ -220,6 +220,16 @@ export const importSalarySchema = z.object({
   note: z.string().max(200).default(""),
 });
 
+export const removeTransactionSchema = z.object({
+  category: z.string().min(1),
+  note: z.string().min(1),
+});
+
+export const removeBudgetSchema = z.object({
+  month: z.string().regex(/^\d{4}-\d{2}$/, "Month must look like 2026-09"),
+  category: z.string().min(1),
+});
+
 export const importFileSchema = z.object({
   version: z.literal(1),
   source: z.string().max(200).optional(),
@@ -227,5 +237,7 @@ export const importFileSchema = z.object({
   transactions: z.array(importTransactionSchema).default([]),
   budgets: z.array(importBudgetSchema).default([]),
   salary: z.array(importSalarySchema).default([]),
+  removeTransactions: z.array(removeTransactionSchema).default([]),
+  removeBudgets: z.array(removeBudgetSchema).default([]),
 });
 export type ImportFile = z.infer<typeof importFileSchema>;
