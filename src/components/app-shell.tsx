@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BanknoteIcon,
+  BookOpenTextIcon,
   LayoutDashboardIcon,
   ReceiptIcon,
   RepeatIcon,
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/salary", label: "Salary", icon: BanknoteIcon },
   { href: "/recurring", label: "Recurring", icon: RepeatIcon },
   { href: "/categories", label: "Categories", icon: TagsIcon },
+  { href: "/help", label: "Help", icon: BookOpenTextIcon },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

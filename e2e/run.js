@@ -11,6 +11,7 @@ const SUITES = [
   "salary.js",
   "import.js",
   "export.js",
+  "help.js",
 ];
 const ROOT = path.resolve(__dirname, "..");
 
